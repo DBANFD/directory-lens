@@ -17,7 +17,7 @@ function Invoke-Database([string]$Sql, [switch]$Write) {
     $info = New-Object Diagnostics.ProcessStartInfo
     $info.FileName = $script:SqliteExe
     $mode = if ($Write) { '' } else { '-readonly ' }
-    $info.Arguments = '-batch -init NUL ' + $mode + '"' + $fullPath + '"'
+    $info.Arguments = '-batch -bail -json -cmd ".timeout 10000" -init NUL ' + $mode + '"' + $fullPath + '"'
     $info.UseShellExecute = $false
     $info.CreateNoWindow = $true
     $info.RedirectStandardInput = $true
@@ -31,7 +31,7 @@ function Invoke-Database([string]$Sql, [switch]$Write) {
         [void]$p.Start()
         $stdout = $p.StandardOutput.ReadToEndAsync()
         $stderr = $p.StandardError.ReadToEndAsync()
-        $bytes = [Text.Encoding]::UTF8.GetBytes(".bail on`n.timeout 10000`n.mode json`n" + $Sql + "`n")
+        $bytes = [Text.Encoding]::UTF8.GetBytes($Sql + "`n")
         $p.StandardInput.BaseStream.Write($bytes, 0, $bytes.Length)
         $p.StandardInput.Close()
         $p.WaitForExit()

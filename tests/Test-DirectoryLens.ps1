@@ -1,5 +1,7 @@
 ﻿#requires -Version 5.1
 $ErrorActionPreference='Stop'
+# Reproduce UTF-8 console input used by hosted Windows runners.
+[Console]::InputEncoding = New-Object Text.UTF8Encoding($true)
 $root=Split-Path $PSScriptRoot
 $testRoot=Join-Path $root ('work\tests-'+[guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Force $testRoot | Out-Null
