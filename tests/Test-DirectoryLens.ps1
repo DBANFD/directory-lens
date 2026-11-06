@@ -52,6 +52,31 @@ Assert (-not $script:Busy) 'GUI startup timed out'
 Assert ($script:C.DataPanel.Visibility -eq 'Visible') 'Empty startup must open import guidance'
 Assert ($script:C.SnapshotDetails.Text -match 'Intune: 0 records') 'Empty Intune summary missing'
 Assert ($script:Window.Title -like 'Directory Lens*') 'Window branding incorrect'
+# Branding uses an isolated workspace; the developer copy remains neutral.
+$script:AppRoot=$testRoot
+$databaseBefore=(Get-FileHash $empty).Hash
+$C.BrandNameInput.Text='Example Lab'
+$C.BrandSubtitleInput.Text='IDENTITY WORKSPACE'
+$C.BrandAccentInput.Text='#F0B429'
+$script:PendingLogo=Join-Path $root 'design\directory-icon\DirectoryIcon.png'
+$C.BrandUseLogo.IsChecked=$true
+Save-BrandingForm
+Assert ((Read-Branding $testRoot).Name -eq 'Example Lab') 'Branding persistence failed'
+Assert ($Window.Title -eq 'Example Lab | Offline lookup') 'Brand title failed'
+Assert ($C.BrandLogo.Visibility -eq 'Visible' -and $Window.Icon) 'Custom logo failed'
+Assert ($script:BrandForeground -eq '#12263E') 'Bright accent contrast failed'
+$kql=New-KqlWindow
+Assert ($kql.Title -eq 'Example Lab | KQL generator') 'KQL branding failed'
+$kql.Close()
+$settings=Join-Path $testRoot 'branding\settings.json'
+$saved=(Get-FileHash $settings).Hash
+$C.BrandAccentInput.Text='invalid'
+$rejected=$false
+try { Save-BrandingForm } catch { $rejected=$true }
+Assert ($rejected -and (Get-FileHash $settings).Hash -eq $saved) 'Invalid branding must preserve saved settings'
+$C.BrandReset.RaiseEvent([Windows.RoutedEventArgs]::new([Windows.Controls.Button]::ClickEvent))
+Assert ($Window.Title -eq 'Directory Lens | Offline lookup' -and -not (Read-Branding $testRoot).Logo) 'Reset branding failed'
+Assert ((Get-FileHash $empty).Hash -eq $databaseBefore) 'Branding changed database'
 $script:Timer.Stop()
 $script:Window.Close()
-Write-Output 'PASS: empty initialization, all three imports, isolation, identity lookup, invalid-import preservation, backups, integrity, group safeguards, eleven KQL templates and WPF empty startup.'
+Write-Output 'PASS: empty initialization, all three imports, isolation, identity lookup, invalid-import preservation, backups, integrity, group safeguards, eleven KQL templates WPF empty startup, branding persistence, logo, validation, contrast and reset.'

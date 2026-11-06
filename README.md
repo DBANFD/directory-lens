@@ -38,6 +38,14 @@ Run from Windows PowerShell 5.1:
 .\Package.ps1
 ```
 
-The package script uses an explicit file allowlist and creates a new empty database, regardless of data in the developer workspace. Output: `dist/Directory-Lens-0.1.0.zip`. A cloned checkout initializes its database on first GUI launch. `Initialize-Database.ps1` refuses to overwrite an existing database.
+The package script uses an explicit file allowlist and creates a new empty database, regardless of data in the developer workspace. Output: `dist/Directory-Lens-0.2.0.zip`. A cloned checkout initializes its database on first GUI launch. `Initialize-Database.ps1` refuses to overwrite an existing database.
 
 SQLite runtime provenance: [THIRD-PARTY.txt](THIRD-PARTY.txt). This project is independent of Microsoft. No third-party endorsement is implied.
+
+## Workspace branding
+
+Click **Branding** in the sidebar (or scroll to **Workspace branding** under **Data and refresh**), and set an app name, subtitle and hex accent color. Optionally choose a PNG logo (up to 5 MB, maximum 4096 pixels per dimension), then click **Save branding**. Changes apply immediately and persist across launches. **Restore default branding** resets the appearance without changing imported data.
+
+The logo appears in the sidebar and as the running window icon. The executable filename and its Windows Explorer icon remain Directory Lens. Local settings and a copied logo live in `branding/`; keep that folder with the app when moving a branded workspace. Uncheck **Use custom PNG logo** to hide it. Restoring defaults does not delete the saved logo file.
+
+Branding is local to each portable copy, Git-ignored, and excluded from the empty distribution package. The app name appears in window and record/KQL dialog titles. Neutral export filenames remain stable. A fresh package always starts with Directory Lens branding.

@@ -12,11 +12,12 @@ $TemplatePath=Join-Path $PSScriptRoot 'ImportGroupMembersTemplate.csv'
 $NameColumn=$null
 . (Join-Path $PSScriptRoot 'Csv-Helpers.ps1')
 . (Join-Path $PSScriptRoot 'Database.ps1')
+. (Join-Path $PSScriptRoot 'Branding.ps1')
 if (-not (Test-Path -LiteralPath $DatabasePath)) { & (Join-Path $PSScriptRoot 'Initialize-Database.ps1') -DatabasePath $DatabasePath }
 
 function Show-Problem([string]$Message) {
     $script:C.StatusText.Text=$Message
-    [void][Windows.MessageBox]::Show($script:Window,$Message,'Directory Lens',[Windows.MessageBoxButton]::OK,[Windows.MessageBoxImage]::Warning)
+    [void][Windows.MessageBox]::Show($script:Window,$Message,$script:Brand.Name,[Windows.MessageBoxButton]::OK,[Windows.MessageBoxImage]::Warning)
 }
 function Set-Status([string]$Text) { $script:C.StatusText.Text=$Text }
 function Set-GridColumns([string]$Type) {
@@ -60,7 +61,7 @@ function Update-Actions {
 }
 function Set-Busy([bool]$Value) {
     $script:Busy=$Value
-    foreach ($key in @('NavDevices','NavUsers','NavBulk','NavBulkUsers','NavKql','NavData','SearchButton','SearchText','ChooseCsv','ColumnPicker','NoHeaderCheck','ExampleButton','ImportDevices','ImportUsers','ImportIntune','ReloadSummary')) { $script:C[$key].IsEnabled= -not $Value }
+    foreach ($key in @('NavDevices','NavUsers','NavBulk','NavBulkUsers','NavKql','NavData','NavBranding','SearchButton','SearchText','ChooseCsv','ColumnPicker','NoHeaderCheck','ExampleButton','ImportDevices','ImportUsers','ImportIntune','ReloadSummary')) { $script:C[$key].IsEnabled= -not $Value }
     $script:C.Progress.Visibility=if ($Value) { 'Visible' } else { 'Collapsed' }
     if (-not $Value) { Update-CsvPreview } else { $script:C.RunBulk.IsEnabled=$false }
     Update-Actions
@@ -82,7 +83,8 @@ function Set-Page([string]$Page) {
     Set-GridColumns $script:ResultType
     $script:C.SearchText.Text=''
     foreach ($pair in @(@('Devices','NavDevices'),@('Users','NavUsers'),@('Bulk','NavBulk'),@('BulkUsers','NavBulkUsers'),@('Data','NavData'))) {
-        $script:C[$pair[1]].Background=if ($Page -eq $pair[0]) { '#2A4562' } else { 'Transparent' }
+        $script:C[$pair[1]].Background=if ($Page -eq $pair[0]) { $script:Brand.Accent } else { 'Transparent' }
+        $script:C[$pair[1]].Foreground=if ($Page -eq $pair[0]) { $script:BrandForeground } else { '#CAD6E5' }
     }
     $script:C.SearchPanel.Visibility=if ($Page -in @('Devices','Users')) { 'Visible' } else { 'Collapsed' }
     $script:C.BulkPanel.Visibility=if ($Page -in @('Bulk','BulkUsers')) { 'Visible' } else { 'Collapsed' }
@@ -345,6 +347,7 @@ function New-KqlWindow {
     $script:KqlWindow=[Windows.Markup.XamlReader]::Load((New-Object Xml.XmlNodeReader($markup)))
     if ($script:Window.IsVisible) { $script:KqlWindow.Owner=$script:Window }
     $script:KqlWindow.Icon=$script:Window.Icon
+    $script:KqlWindow.Title=$script:Brand.Name+' | KQL generator'
     $script:K=@{}
     foreach ($name in @('Template','Days','DaysLabel','Generate','UseLast','Names','SourceHint','ApplicationPanel','Application','TemplateHint','Query','Status','Copy','Save','Close')) { $script:K[$name]=$script:KqlWindow.FindName($name) }
     $K.Template.ItemsSource=[string[]]@('Defender mode and transition','Device inventory and health','Recent successful logons','SentinelOne and MDE coexistence','Security-agent uninstall activity','Application Control audit and blocks','Missing or stale device telemetry','ASR audit and blocks','Network Protection audit and blocks','Controlled Folder Access','Defender configuration gaps')
@@ -398,6 +401,59 @@ function Generate-KqlPreview {
     $script:K.Copy.IsEnabled=$true; $script:K.Save.IsEnabled=$true
     $script:K.Status.Text="$($generated.Count) unique short hostnames from $($generated.InputCount) nonblank entries. Review before running; no live tenant validation was performed."
 }
+function Apply-Branding {
+    $script:Window.Title=$script:Brand.Name+' | Offline lookup'
+    $script:C.BrandName.Text=$script:Brand.Name
+    $script:C.BrandSubtitle.Text=$script:Brand.Subtitle
+    $color=[Windows.Media.ColorConverter]::ConvertFromString($script:Brand.Accent)
+    $script:BrandForeground=if ((0.299*$color.R+0.587*$color.G+0.114*$color.B) -gt 150) { '#12263E' } else { '#FFFFFF' }
+    $script:Window.Resources['BrandAccent']=[Windows.Media.SolidColorBrush]::new($color)
+    $script:Window.Resources['BrandContrast']=[Windows.Media.BrushConverter]::new().ConvertFromString($script:BrandForeground)
+    $script:C.BrandLogo.Source=$null
+    $script:C.BrandLogo.Visibility='Collapsed'
+    $script:Window.Icon=$script:DefaultIcon
+    if ($script:Brand.Logo) {
+        try {
+            $logo=Get-BrandLogo (Join-Path $script:AppRoot 'branding\logo.png')
+            $script:C.BrandLogo.Source=$logo
+            $script:C.BrandLogo.Visibility='Visible'
+            $script:Window.Icon=$logo
+        } catch { $script:C.BrandLogoStatus.Text='Logo unavailable. Choose a valid PNG and save again.' }
+    }
+    foreach ($pair in @(@('Devices','NavDevices'),@('Users','NavUsers'),@('Bulk','NavBulk'),@('BulkUsers','NavBulkUsers'),@('Data','NavData'))) {
+        $active=$script:Page -eq $pair[0]
+        $script:C[$pair[1]].Background=if ($active) { $script:Brand.Accent } else { 'Transparent' }
+        $script:C[$pair[1]].Foreground=if ($active) { $script:BrandForeground } else { '#CAD6E5' }
+    }
+}
+function Fill-BrandingForm {
+    $script:C.BrandNameInput.Text=$script:Brand.Name
+    $script:C.BrandSubtitleInput.Text=$script:Brand.Subtitle
+    $script:C.BrandAccentInput.Text=$script:Brand.Accent
+    $script:C.BrandUseLogo.IsChecked=$script:Brand.Logo
+    $script:C.BrandLogoStatus.Text=if ($script:Brand.Logo) { 'Workspace logo: branding\logo.png' } else { 'No custom logo selected.' }
+    $script:PendingLogo=''
+}
+function Save-BrandingForm {
+    $brand=[pscustomobject]@{Name=$C.BrandNameInput.Text.Trim();Subtitle=$C.BrandSubtitleInput.Text.Trim();Accent=$C.BrandAccentInput.Text.Trim();Logo=[bool]$C.BrandUseLogo.IsChecked}
+    Test-Branding $brand
+    if ($brand.Logo) {
+        $source=if ($script:PendingLogo) { $script:PendingLogo } else { Join-Path $script:AppRoot 'branding\logo.png' }
+        $null=Get-BrandLogo $source
+        if ($script:PendingLogo) {
+            $dir=Join-Path $script:AppRoot 'branding'
+            [void][IO.Directory]::CreateDirectory($dir)
+            $target=Join-Path $dir 'logo.png'
+            if ([IO.Path]::GetFullPath($source) -ne [IO.Path]::GetFullPath($target)) { Copy-Item -LiteralPath $source -Destination $target -Force }
+        }
+    }
+    Write-Branding $script:AppRoot $brand
+    $script:Brand=$brand
+    Fill-BrandingForm
+    Apply-Branding
+    Set-Status 'Branding saved for this workspace.'
+}
+
 function Request-Import([string]$Kind) {
     $path=Open-CsvDialog
     if (-not $path) { return }
@@ -421,6 +477,25 @@ try {
     }
     $script:C=@{}
     $xaml.SelectNodes('//*[@*[local-name()="Name"]]') | ForEach-Object { $name=$_.GetAttribute('Name','http://schemas.microsoft.com/winfx/2006/xaml'); if ($name) { $script:C[$name]=$script:Window.FindName($name) } }
+    $script:DefaultIcon=$script:Window.Icon
+    $script:Page='Devices'
+    try { $script:Brand=Read-Branding $script:AppRoot } catch { $script:Brand=Get-DefaultBranding }
+    Fill-BrandingForm
+    Apply-Branding
+    $C.BrandSave.Add_Click({ try { Save-BrandingForm } catch { Show-Problem $_.Exception.Message } })
+    $C.BrandReset.Add_Click({ try { $brand=Get-DefaultBranding; Write-Branding $script:AppRoot $brand; $script:Brand=$brand; Fill-BrandingForm; Apply-Branding; Set-Status 'Default branding restored. Imported data is unchanged.' } catch { Show-Problem $_.Exception.Message } })
+    $C.BrandChooseLogo.Add_Click({
+        try {
+            $dialog=New-Object Microsoft.Win32.OpenFileDialog
+            $dialog.Filter='PNG logo (*.png)|*.png'
+            if ($dialog.ShowDialog($script:Window)) {
+                $null=Get-BrandLogo $dialog.FileName
+                $script:PendingLogo=$dialog.FileName
+                $C.BrandUseLogo.IsChecked=$true
+                $C.BrandLogoStatus.Text='Selected: '+[IO.Path]::GetFileName($dialog.FileName)+' (click Save branding)'
+            }
+        } catch { Show-Problem $_.Exception.Message }
+    })
     $script:Busy=$false; $script:Results=@(); $script:ResultType='Devices'; $script:CsvPath=''; $script:CsvRows=@(); $script:CsvColumns=@(); $script:Worker=$null; $script:LastError=$null
     $script:LastDeviceNames=@(); $script:LastDeviceSource=''
     $script:Timer=New-Object Windows.Threading.DispatcherTimer
@@ -431,6 +506,7 @@ try {
     $C.NavBulk.Add_Click({ Set-Page 'Bulk' })
     $C.NavBulkUsers.Add_Click({ Set-Page 'BulkUsers' })
     $C.NavData.Add_Click({ Set-Page 'Data' })
+    $C.NavBranding.Add_Click({ Set-Page 'Data'; $C.BrandingHeading.BringIntoView() })
     $C.NavKql.Add_Click({ try { $dialog=New-KqlWindow; [void]$dialog.ShowDialog() } catch { Show-Problem $_.Exception.Message } })
     $C.SearchButton.Add_Click({ try { if ([string]::IsNullOrWhiteSpace($C.SearchText.Text)) { Set-Status 'Enter some search text first.' } else { Start-Work $script:Page -Query $C.SearchText.Text } } catch { Show-Problem $_.Exception.Message } })
     $C.SearchText.Add_KeyDown({ if ($_.Key -eq 'Return' -and -not $script:Busy) { $C.SearchButton.RaiseEvent([Windows.RoutedEventArgs]::new([Windows.Controls.Button]::ClickEvent)) } })
@@ -467,7 +543,7 @@ try {
         $selected=$script:C.ResultsGrid.SelectedItem
         if (-not $selected) { return }
         $dialog=New-Object Windows.Window
-        $dialog.Title='Directory Lens | Record details'
+        $dialog.Title=$script:Brand.Name+' | Record details'
         $dialog.Width=780; $dialog.Height=700; $dialog.MinWidth=500; $dialog.MinHeight=400
         $dialog.WindowStartupLocation='CenterOwner'; $dialog.Owner=$script:Window
         $text=New-Object Windows.Controls.TextBox
