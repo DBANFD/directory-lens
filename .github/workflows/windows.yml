@@ -12,7 +12,9 @@ jobs:
         run: ./Build.ps1
       - name: Test synthetic imports and WPF startup
         shell: powershell
-        run: ./tests/Test-DirectoryLens.ps1
+        run: |
+          ./tests/Test-DirectoryLens.ps1
+          ./tests/Test-Defender.ps1
       - name: Build empty portable package
         shell: powershell
         run: ./Package.ps1

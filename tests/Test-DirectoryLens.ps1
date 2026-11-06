@@ -11,7 +11,7 @@ $DatabasePath=Join-Path $testRoot 'test.db'
 function Assert($Condition,[string]$Message) { if (-not $Condition) { throw $Message } }
 & (Join-Path $root 'Initialize-Database.ps1') -DatabasePath $DatabasePath
 $summary=@(Get-DatabaseSummary)
-Assert ($summary.Count -eq 3 -and @($summary | Where-Object Records -ne 0).Count -eq 0) 'Empty database must report three zero datasets'
+Assert ($summary.Count -eq 4 -and @($summary | Where-Object Records -ne 0).Count -eq 0) 'Empty database must report four zero datasets'
 foreach ($kind in @('Devices','Users','Intune')) {
  $file=@{Devices='Entra-Devices.csv';Users='Entra-Users.csv';Intune='Intune-Devices.csv'}[$kind]
  & (Join-Path $root 'Import-DirectoryLens.ps1') -Kind $kind -CsvPath (Join-Path $root ('examples\'+$file)) -DatabasePath $DatabasePath

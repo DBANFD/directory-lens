@@ -61,3 +61,15 @@ Group exports include eligible exact unambiguous matches and deduplicate Object 
 - [Intune report exports and schemas](https://learn.microsoft.com/en-us/intune/device-management/reports/ref-graph-available-reports)
 
 Portal labels and exported columns can change. The required columns above describe this version's importer.
+
+## 4. Microsoft Defender device inventory
+
+Export the device inventory CSV from **Microsoft Defender portal > Assets > Devices > Export**. Use **Import Defender CSV** under **Data and refresh**. Extract ZIP files first if applicable. Clear portal filters for a complete exported scope; visibility still depends on your permissions. This importer supports the portal inventory format, not arbitrary hunting-query results.
+
+Required columns: `Device ID` (40-character hexadecimal Defender ID), `Device Name`, and `AAD Device Id` (Entra Device ID, also accepts `AadDeviceId`). Each Defender ID must be unique. Blank, zero or malformed AAD IDs are stored without a link. All original columns are retained in Details and CSV reports.
+
+Enrichment joins valid AAD Device IDs to Entra/Intune Device IDs. It never joins on names. Multiple Defender records remain separate rows; multiple Intune enrollments can repeat linked Defender records. Defender-only devices remain searchable by name and are never eligible for group export. A same-name unlinked Defender record disables name-based group eligibility. Existing device search uses Entra names and Intune/Defender-only names; linked inventory names are displayed as additional fields.
+
+Health, onboarding, risk and exposure reflect the export. `Last device update` remains the portal field and is not interpreted as current sensor activity. Discovery records need not be onboarded endpoints. Missing snapshot records do not prove that a device is unprotected.
+
+Importing Defender replaces only the Defender dataset and preserves Entra devices, users and Intune records. Earlier Directory Lens databases remain readable; importing a dataset adds the new table transactionally after making a backup.

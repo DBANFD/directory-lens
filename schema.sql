@@ -9,5 +9,8 @@ CREATE TABLE IF NOT EXISTS intune(IntuneDeviceId TEXT PRIMARY KEY, DeviceId TEXT
 CREATE INDEX IF NOT EXISTS intune_device ON intune(DeviceId);
 CREATE INDEX IF NOT EXISTS intune_name ON intune(NameKey);
 CREATE INDEX IF NOT EXISTS devices_device ON devices(DeviceId COLLATE NOCASE);
-PRAGMA user_version=1;
+CREATE TABLE IF NOT EXISTS defender(DefenderDeviceId TEXT PRIMARY KEY, DeviceId TEXT, DeviceName TEXT, NameKey TEXT, InventoryJson TEXT);
+CREATE INDEX IF NOT EXISTS defender_device ON defender(DeviceId);
+CREATE INDEX IF NOT EXISTS defender_name ON defender(NameKey);
+PRAGMA user_version=2;
 COMMIT;

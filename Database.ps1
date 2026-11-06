@@ -53,6 +53,11 @@ FROM counts c LEFT JOIN imports i ON i.ImportId=(SELECT max(j.ImportId) FROM imp
     if (Test-IntuneDataset) {
         Invoke-Database "SELECT 'Intune' AS Dataset, (SELECT count(*) FROM intune) AS Records, i.ImportedUtc, i.SourceFile, i.SourceModifiedUtc FROM (SELECT 1) LEFT JOIN imports i ON i.ImportId=(SELECT max(ImportId) FROM imports WHERE Dataset='Intune');"
     }
+    if (Test-DefenderDataset) {
+        Invoke-Database "SELECT 'Defender' AS Dataset, (SELECT count(*) FROM defender) AS Records, i.ImportedUtc, i.SourceFile, i.SourceModifiedUtc FROM (SELECT 1) LEFT JOIN imports i ON i.ImportId=(SELECT max(ImportId) FROM imports WHERE Dataset='Defender');"
+    } else {
+        [pscustomobject]@{Dataset='Defender';Records=0;ImportedUtc='';SourceFile='';SourceModifiedUtc=''}
+    }
 }
 function Search-EntraDevices([string[]]$Names) {
     # One indexed query per batch; never place raw names in SQL identifiers or commands.
@@ -472,12 +477,71 @@ function Merge-IntuneResults([object[]]$Rows, [string[]]$Names, [switch]$Partial
         }
     }
 }
+function Test-DefenderDataset {
+    return (@(Invoke-Database "SELECT name FROM sqlite_master WHERE type='table' AND name='defender';").Count -gt 0)
+}
+function Add-DefenderInventory($Row, $Inventory, [string[]]$Headers, [int]$Count=0) {
+    $record=[ordered]@{}
+    foreach ($property in $Row.PSObject.Properties) { $record[$property.Name]=$property.Value }
+    $record['DefenderLink']=if ($Inventory) { if ($Row.Status -ne 'DefenderOnly') { 'AAD Device ID' } else { 'Defender only: no Entra/Intune identity match' } } else { 'No linked Defender record in snapshot' }
+    $record['DefenderRecordCount']=$Count
+    foreach ($header in $Headers) {
+        $field='Defender'+($header -replace '[^a-zA-Z0-9]','')
+        $record[$field]=if ($Inventory) { [string]$Inventory.$header } else { '' }
+    }
+    [pscustomobject]$record
+}
+function Merge-DefenderResults([object[]]$Rows, [string[]]$Names, [switch]$Partial) {
+    if (-not (Test-DefenderDataset)) { $Rows; return }
+    $sample=@(Invoke-Database 'SELECT InventoryJson FROM defender LIMIT 1;')
+    if (-not $sample.Count) { $Rows; return }
+    $headers=@(($sample[0].InventoryJson | ConvertFrom-Json).PSObject.Properties.Name)
+    $ids=@($Rows | ForEach-Object { if (Test-Guid $_.DeviceId) { Sql-Text ([guid]$_.DeviceId).ToString() } } | Select-Object -Unique)
+    $byId=@{}
+    if ($ids.Count) {
+        foreach ($item in @(Invoke-Database ("SELECT * FROM defender WHERE DeviceId IN ("+($ids -join ',')+") ORDER BY DefenderDeviceId;"))) {
+            if (-not $byId.ContainsKey($item.DeviceId)) { $byId[$item.DeviceId]=New-Object Collections.Generic.List[object] }
+            $byId[$item.DeviceId].Add(($item.InventoryJson | ConvertFrom-Json))
+        }
+    }
+    $keys=@($Names | ForEach-Object { Sql-Text $_.Trim().ToUpperInvariant() } | Select-Object -Unique)
+    if (-not $keys.Count) { return }
+    $condition=if ($Partial) { 'instr(i.NameKey,'+$keys[0]+')>0' } else { 'i.NameKey IN ('+($keys -join ',')+") AND i.NameKey<>''" }
+    $intuneExclusion=if (Test-IntuneDataset) { " AND NOT EXISTS (SELECT 1 FROM intune t WHERE t.DeviceId=i.DeviceId COLLATE NOCASE AND i.DeviceId<>'')" } else { '' }
+    # Never link by hostname: retain orphan records, even when an Entra name is identical.
+    $orphans=@(Invoke-Database ("SELECT i.* FROM defender i WHERE $condition AND NOT EXISTS (SELECT 1 FROM devices d WHERE d.DeviceId=i.DeviceId COLLATE NOCASE AND i.DeviceId<>'') $intuneExclusion ORDER BY i.DeviceName,i.DefenderDeviceId;"))
+    $orphansByName=@{}
+    foreach ($item in $orphans) {
+        if (-not $orphansByName.ContainsKey($item.NameKey)) { $orphansByName[$item.NameKey]=New-Object Collections.Generic.List[object] }
+        $orphansByName[$item.NameKey].Add($item)
+    }
+    foreach ($row in $Rows) {
+        $nameKey=$row.RequestedName.ToUpperInvariant()
+        if ($row.Status -eq 'NotFound' -and $orphansByName.ContainsKey($nameKey)) { continue }
+        $id=[string]$row.DeviceId
+        if (Test-Guid $id) { $id=([guid]$id).ToString() }
+        # An unlinked same-name device makes name-only group selection unsafe.
+        if ($orphansByName.ContainsKey($nameKey)) { $row.GroupEligible=$false; if ($row.Status -eq 'Matched') { $row.Status='Ambiguous' } }
+        if ($byId.ContainsKey($id)) {
+            foreach ($inventory in $byId[$id]) { Add-DefenderInventory $row $inventory $headers $byId[$id].Count }
+        } else { Add-DefenderInventory $row $null $headers }
+    }
+    # Repeat orphan matches per bulk input, retaining the caller's original requested name.
+    foreach ($name in $Names) {
+        $items=if ($Partial) { $orphans } elseif ($orphansByName.ContainsKey($name.Trim().ToUpperInvariant())) { $orphansByName[$name.Trim().ToUpperInvariant()] } else { @() }
+        foreach ($item in $items) {
+            $inventory=$item.InventoryJson | ConvertFrom-Json
+            $row=[pscustomobject]@{RequestedName=$name.Trim(); DeviceName=$item.DeviceName; DeviceId=$item.DeviceId; ObjectId=''; Status='DefenderOnly'; GroupEligible=$false; OS=$(if ($inventory.PSObject.Properties['OS Platform']) { [string]$inventory.'OS Platform' } else { '' }); JoinType=''; Enabled=''; EntraOwnerText=''; LastSignIn=''}
+            Add-DefenderInventory $row $inventory $headers 1
+        }
+    }
+}
 function Search-Devices([string[]]$Names) {
     if (-not $Names.Count) { return }
-    Merge-IntuneResults -Rows @(Search-EntraDevices $Names) -Names $Names
+    Merge-DefenderResults -Rows @(Merge-IntuneResults -Rows @(Search-EntraDevices $Names) -Names $Names) -Names $Names
 }
 function Search-DeviceText([string]$Query) {
-    Merge-IntuneResults -Rows @(Search-EntraDeviceText $Query) -Names @($Query) -Partial
+    Merge-DefenderResults -Rows @(Merge-IntuneResults -Rows @(Search-EntraDeviceText $Query) -Names @($Query) -Partial) -Names @($Query) -Partial
 }
 function Search-Users([string]$Query) {
     if ([string]::IsNullOrWhiteSpace($Query)) { throw 'Enter a user name, UPN or Object ID.' }

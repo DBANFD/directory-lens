@@ -27,7 +27,7 @@ function Set-GridColumns([string]$Type) {
     } elseif ($Type -eq 'BulkUsers') {
         @(@('Requested user','RequestedUser',220),@('Match','Status',115),@('Name','DisplayName',210),@('UPN','UPN',290),@('Object ID','ObjectId',290),@('Matched by','MatchBy',100),@('Input row','InputRow',90))
     } else {
-        @(@('Device name','DeviceName',190),@('Match','Status',130),@('OS','OS',100),@('Intune link','IntuneLink',220),@('Primary user UPN','IntunePrimaryuserUPN',270),@('Compliance (snapshot)','IntuneCompliance',165),@('Last check-in','IntuneLastcheckin',200),@('Encrypted','IntuneEncrypted',95),@('Model','IntuneModel',180),@('Serial number','IntuneSerialnumber',160),@('Managed by','IntuneManagedby',120),@('Ownership','IntuneOwnership',100),@('OS version','IntuneOSversion',150),@('Intune device name','IntuneDevicename',190),@('Intune device ID','IntuneDeviceID',290),@('Enrollments','IntuneEnrollmentCount',100),@('Device ID','DeviceId',290),@('Object ID','ObjectId',290),@('Requested name','RequestedName',190),@('Owner label','EntraOwnerText',200),@('Group eligible','GroupEligible',115))
+        @(@('Device name','DeviceName',190),@('Match','Status',130),@('OS','OS',100),@('Defender link','DefenderLink',230),@('Defender onboarding','DefenderOnboardingStatus',170),@('Sensor health','DefenderHealthStatus',130),@('Risk','DefenderRiskLevel',100),@('Exposure','DefenderExposureLevel',100),@('Defender last update','DefenderLastdeviceupdate',190),@('Defender device name','DefenderDeviceName',220),@('Defender device ID','DefenderDeviceID',300),@('Defender records','DefenderRecordCount',110),@('Intune link','IntuneLink',220),@('Primary user UPN','IntunePrimaryuserUPN',270),@('Compliance (snapshot)','IntuneCompliance',165),@('Last check-in','IntuneLastcheckin',200),@('Encrypted','IntuneEncrypted',95),@('Model','IntuneModel',180),@('Serial number','IntuneSerialnumber',160),@('Managed by','IntuneManagedby',120),@('Ownership','IntuneOwnership',100),@('OS version','IntuneOSversion',150),@('Intune device name','IntuneDevicename',190),@('Intune device ID','IntuneDeviceID',290),@('Enrollments','IntuneEnrollmentCount',100),@('Device ID','DeviceId',290),@('Object ID','ObjectId',290),@('Requested name','RequestedName',190),@('Owner label','EntraOwnerText',200),@('Group eligible','GroupEligible',115))
     }
     foreach ($definition in $definitions) {
         $col=New-Object Windows.Controls.DataGridTextColumn
@@ -61,7 +61,7 @@ function Update-Actions {
 }
 function Set-Busy([bool]$Value) {
     $script:Busy=$Value
-    foreach ($key in @('NavDevices','NavUsers','NavBulk','NavBulkUsers','NavKql','NavData','NavBranding','SearchButton','SearchText','ChooseCsv','ColumnPicker','NoHeaderCheck','ExampleButton','ImportDevices','ImportUsers','ImportIntune','ReloadSummary')) { $script:C[$key].IsEnabled= -not $Value }
+    foreach ($key in @('NavDevices','NavUsers','NavBulk','NavBulkUsers','NavKql','NavData','NavBranding','SearchButton','SearchText','ChooseCsv','ColumnPicker','NoHeaderCheck','ExampleButton','ImportDevices','ImportUsers','ImportIntune','ImportDefender','ReloadSummary')) { $script:C[$key].IsEnabled= -not $Value }
     $script:C.Progress.Visibility=if ($Value) { 'Visible' } else { 'Collapsed' }
     if (-not $Value) { Update-CsvPreview } else { $script:C.RunBulk.IsEnabled=$false }
     Update-Actions
@@ -110,7 +110,7 @@ function Set-Page([string]$Page) {
             $script:C.PageTitle.Text='Device directory'
             $script:C.PageSubtitle.Text='Find a device, inspect its identity, and copy what you need.'
             $script:C.SearchLabel.Text='Full or partial device name'
-            $script:C.SearchHint.Text='Entra identities enriched by Intune Azure AD Device ID. Scroll for inventory columns; export results includes all Intune fields.'
+            $script:C.SearchHint.Text='Entra identities enriched by Intune and Defender Entra device IDs. Scroll for inventory columns; Details and exports include all inventory fields.'
         }
         'Users' {
             $script:C.PageTitle.Text='User directory'
@@ -170,7 +170,7 @@ function Apply-Summary([object[]]$Rows) {
     $parts=foreach ($row in $Rows) {
         "$($row.Dataset): $($row.Records) records`nSource: $($row.SourceFile)`nImported (UTC): $($row.ImportedUtc)`nFile modified (UTC): $($row.SourceModifiedUtc)"
     }
-    $script:C.SnapshotDetails.Text=($parts -join "`n`n")+"`n`nSource filenames may identify an older export date. Import time is not data freshness. Intune compliance and encryption are exported observations; check Last check-in. Multiple enrollments are separate rows.`n`nDatabase: $script:DatabasePath"
+    $script:C.SnapshotDetails.Text=($parts -join "`n`n")+"`n`nSource filenames may identify an older export date. Import time is not data freshness. Intune compliance and encryption are exported observations; check Last check-in. Multiple enrollments and Defender identities remain separate rows. Defender health, risk and onboarding are exported observations; Last device update is not a live heartbeat.`n`nDatabase: $script:DatabasePath"
 }
 function Start-Work([string]$Task, [string]$Query='', [string]$CsvPath='', [string]$Column='', [bool]$Headerless=$false) {
     if ($script:Busy) { return }
@@ -194,6 +194,7 @@ function Start-Work([string]$Task, [string]$Query='', [string]$CsvPath='', [stri
             'BulkUsers' { $values=@(Get-NamesFromCsv $CsvPath -NoHeader:$Headerless); Search-UserList $values }
             'Summary' { Get-DatabaseSummary }
             'ImportDevices' { & (Join-Path $Root 'Import-DirectoryLens.ps1') -Kind Devices -CsvPath $CsvPath -DatabasePath $Db; Get-DatabaseSummary }
+            'ImportDefender' { & (Join-Path $Root 'Import-DirectoryLens.ps1') -Kind Defender -CsvPath $CsvPath -DatabasePath $Db; Get-DatabaseSummary }
             'ImportIntune' { & (Join-Path $Root 'Import-DirectoryLens.ps1') -Kind Intune -CsvPath $CsvPath -DatabasePath $Db; Get-DatabaseSummary }
             'ImportUsers' { & (Join-Path $Root 'Import-DirectoryLens.ps1') -Kind Users -CsvPath $CsvPath -DatabasePath $Db; Get-DatabaseSummary }
         }
@@ -207,7 +208,7 @@ function Complete-Work {
     try {
         $rows=@($script:Worker.EndInvoke($script:Handle))
         if ($script:Worker.HadErrors) { throw ($script:Worker.Streams.Error | Out-String) }
-        if ($script:Task -in @('Summary','ImportDevices','ImportUsers','ImportIntune')) {
+        if ($script:Task -in @('Summary','ImportDevices','ImportUsers','ImportIntune','ImportDefender')) {
             Apply-Summary $rows
             if ($script:Task -eq 'Summary' -and @($rows | Where-Object { $_.Records -gt 0 }).Count -eq 0) { Set-Page 'Data' }
             Set-Status $(if ($script:Task -like 'Import*') { 'Snapshot refreshed. A pre-import database backup was created.' } else { 'Ready. Working from local snapshots.' })
@@ -556,6 +557,7 @@ try {
         [void]$dialog.ShowDialog()
     })
     $C.ImportDevices.Add_Click({ try { Request-Import 'Devices' } catch { Show-Problem $_.Exception.Message } })
+    $C.ImportDefender.Add_Click({ try { Request-Import 'Defender' } catch { Show-Problem $_.Exception.Message } })
     $C.ImportIntune.Add_Click({ try { Request-Import 'Intune' } catch { Show-Problem $_.Exception.Message } })
     $C.ImportUsers.Add_Click({ try { Request-Import 'Users' } catch { Show-Problem $_.Exception.Message } })
     $C.ReloadSummary.Add_Click({ Start-Work 'Summary' })

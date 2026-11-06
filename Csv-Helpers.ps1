@@ -91,7 +91,8 @@ function Resolve-OutputPath([string]$Path, [string]$Prefix) {
 function Save-Report($Results, [string]$Path) {
     $Path = Resolve-OutputPath $Path 'Entra-Lookup'
     Assert-NewPath $Path
-    $Results | Export-Csv -LiteralPath $Path -NoTypeInformation -Encoding UTF8
+    $columns=@($Results | ForEach-Object { $_.PSObject.Properties.Name } | Select-Object -Unique)
+    $Results | Select-Object -Property $columns | Export-Csv -LiteralPath $Path -NoTypeInformation -Encoding UTF8
     Write-Host "Lookup report saved: $Path"
 }
 function Save-Group($Results, [string]$Path) {
