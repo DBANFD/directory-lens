@@ -1,0 +1,9 @@
+﻿SQLite 3.54.1 - Windows x64 command-line shell
+Source: https://www.sqlite.org/2026/sqlite-tools-win-x64-3540100.zip
+Downloaded 2026-11-02 from the official SQLite site.
+Archive SHA3-256 verified against official download metadata:
+e171f3993a992edf076746926dd52b5e2ebfabaee38818e74987e1d8112ab987
+Bundled sqlite3.exe SHA256:
+3627C4CE2632949EE6D795C92E0A33F68FB30235F0A55A7719F0636414D8E1D3
+SQLite is in the public domain: https://www.sqlite.org/copyright.html
+Only sqlite3.exe is bundled from the archive.

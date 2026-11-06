@@ -1,0 +1,13 @@
+BEGIN IMMEDIATE;
+CREATE TABLE IF NOT EXISTS devices(ObjectId TEXT PRIMARY KEY, DeviceId TEXT, DeviceName TEXT, NameKey TEXT, OS TEXT, JoinType TEXT, Enabled TEXT, OwnerText TEXT, LastSignIn TEXT);
+CREATE INDEX IF NOT EXISTS devices_name ON devices(NameKey);
+CREATE TABLE IF NOT EXISTS users(ObjectId TEXT PRIMARY KEY, DisplayName TEXT, NameKey TEXT, UPN TEXT, UpnKey TEXT, Department TEXT, Enabled TEXT);
+CREATE INDEX IF NOT EXISTS users_name ON users(NameKey);
+CREATE INDEX IF NOT EXISTS users_upn ON users(UpnKey);
+CREATE TABLE IF NOT EXISTS imports(ImportId INTEGER PRIMARY KEY, Dataset TEXT, ImportedUtc TEXT, SourceFile TEXT, SourceModifiedUtc TEXT, RowCount INTEGER);
+CREATE TABLE IF NOT EXISTS intune(IntuneDeviceId TEXT PRIMARY KEY, DeviceId TEXT, DeviceName TEXT, NameKey TEXT, InventoryJson TEXT);
+CREATE INDEX IF NOT EXISTS intune_device ON intune(DeviceId);
+CREATE INDEX IF NOT EXISTS intune_name ON intune(NameKey);
+CREATE INDEX IF NOT EXISTS devices_device ON devices(DeviceId COLLATE NOCASE);
+PRAGMA user_version=1;
+COMMIT;

@@ -1,0 +1,17 @@
+*.db
+*.db-*
+*.db.backup-*
+*.sqlite*
+*.csv
+!ImportGroupMembersTemplate.csv
+!examples/*.csv
+*.zip
+*.log
+*.kql
+Directory-Lens.exe
+Backups/
+exports/
+imports/
+work/
+dist/
+memory.md
