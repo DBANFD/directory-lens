@@ -506,7 +506,7 @@ try {
     $C.NavBulk.Add_Click({ Set-Page 'Bulk' })
     $C.NavBulkUsers.Add_Click({ Set-Page 'BulkUsers' })
     $C.NavData.Add_Click({ Set-Page 'Data' })
-    $C.NavBranding.Add_Click({ Set-Page 'Data'; $C.BrandingHeading.BringIntoView() })
+    $C.NavBranding.Add_Click({ Set-Page 'Data'; $Window.UpdateLayout(); $offset=$C.BrandingHeading.TranslatePoint([Windows.Point]::new(0,0),$C.DataScroll.Content).Y; $C.DataScroll.ScrollToVerticalOffset($offset) })
     $C.NavKql.Add_Click({ try { $dialog=New-KqlWindow; [void]$dialog.ShowDialog() } catch { Show-Problem $_.Exception.Message } })
     $C.SearchButton.Add_Click({ try { if ([string]::IsNullOrWhiteSpace($C.SearchText.Text)) { Set-Status 'Enter some search text first.' } else { Start-Work $script:Page -Query $C.SearchText.Text } } catch { Show-Problem $_.Exception.Message } })
     $C.SearchText.Add_KeyDown({ if ($_.Key -eq 'Return' -and -not $script:Busy) { $C.SearchButton.RaiseEvent([Windows.RoutedEventArgs]::new([Windows.Controls.Button]::ClickEvent)) } })

@@ -52,7 +52,7 @@
      <DataGrid x:Name="ResultsGrid" Grid.Row="1" Margin="0,0,0,4" AutomationProperties.Name="Lookup results"/>
      <StackPanel x:Name="EmptyState" Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False"><TextBlock x:Name="EmptyTitle" Text="Your directory, ready to search" FontSize="19" FontWeight="SemiBold" HorizontalAlignment="Center"/><TextBlock x:Name="EmptyHint" Text="Enter a name above to see matching records." Foreground="#6A7C90" Margin="0,10,0,0" HorizontalAlignment="Center"/></StackPanel>
     </Grid></Border>
-    <Border x:Name="DataPanel" Visibility="Collapsed" Background="White" CornerRadius="8" Padding="22"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
+    <Border x:Name="DataPanel" Visibility="Collapsed" Background="White" CornerRadius="8" Padding="22"><ScrollViewer x:Name="DataScroll" VerticalScrollBarVisibility="Auto"><StackPanel>
      <TextBlock Text="Refresh from an export" FontSize="17" FontWeight="SemiBold"/><TextBlock Text="Import replaces only the chosen local dataset. A database backup is created first. Use the full export you want included; a filtered export creates a filtered snapshot." TextWrapping="Wrap" Foreground="#63768A" Margin="0,9,0,16"/>
      <WrapPanel><Button x:Name="ImportDevices" Content="Import Entra device CSV" Margin="0,0,10,10"/><Button x:Name="ImportIntune" Content="Import Intune CSV" Margin="0,0,10,10"/><Button x:Name="ImportUsers" Content="Import user CSV" Margin="0,0,10,10"/><Button x:Name="ReloadSummary" Content="Reload details" Margin="0,0,0,10"/></WrapPanel>
      <TextBlock Text="Which CSV should I import?" FontSize="17" FontWeight="SemiBold" Margin="0,12,0,8"/>
