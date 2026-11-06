@@ -13,6 +13,8 @@ $NameColumn=$null
 . (Join-Path $PSScriptRoot 'Csv-Helpers.ps1')
 . (Join-Path $PSScriptRoot 'Database.ps1')
 . (Join-Path $PSScriptRoot 'Branding.ps1')
+. (Join-Path $PSScriptRoot 'Groups.ps1')
+. (Join-Path $PSScriptRoot 'Group-UI.ps1')
 if (-not (Test-Path -LiteralPath $DatabasePath)) { & (Join-Path $PSScriptRoot 'Initialize-Database.ps1') -DatabasePath $DatabasePath }
 
 function Show-Problem([string]$Message) {
@@ -61,7 +63,7 @@ function Update-Actions {
 }
 function Set-Busy([bool]$Value) {
     $script:Busy=$Value
-    foreach ($key in @('NavDevices','NavUsers','NavBulk','NavBulkUsers','NavKql','NavData','NavBranding','SearchButton','SearchText','ChooseCsv','ColumnPicker','NoHeaderCheck','ExampleButton','ImportDevices','ImportUsers','ImportIntune','ImportDefender','ReloadSummary')) { $script:C[$key].IsEnabled= -not $Value }
+    foreach ($key in @('NavDevices','NavUsers','NavBulk','NavBulkUsers','NavKql','NavData','NavBranding','NavGroups','CompareGroup','SearchButton','SearchText','ChooseCsv','ColumnPicker','NoHeaderCheck','ExampleButton','ImportDevices','ImportUsers','ImportIntune','ImportDefender','ReloadSummary')) { $script:C[$key].IsEnabled= -not $Value }
     $script:C.Progress.Visibility=if ($Value) { 'Visible' } else { 'Collapsed' }
     if (-not $Value) { Update-CsvPreview } else { $script:C.RunBulk.IsEnabled=$false }
     Update-Actions
@@ -506,6 +508,8 @@ try {
     $C.NavUsers.Add_Click({ Set-Page 'Users' })
     $C.NavBulk.Add_Click({ Set-Page 'Bulk' })
     $C.NavBulkUsers.Add_Click({ Set-Page 'BulkUsers' })
+    $C.NavGroups.Add_Click({ try { Open-GroupComparison } catch { Show-Problem $_.Exception.Message } })
+    $C.CompareGroup.Add_Click({ try { Open-GroupComparison } catch { Show-Problem $_.Exception.Message } })
     $C.NavData.Add_Click({ Set-Page 'Data' })
     $C.NavBranding.Add_Click({ Set-Page 'Data'; $Window.UpdateLayout(); $offset=$C.BrandingHeading.TranslatePoint([Windows.Point]::new(0,0),$C.DataScroll.Content).Y; $C.DataScroll.ScrollToVerticalOffset($offset) })
     $C.NavKql.Add_Click({ try { $dialog=New-KqlWindow; [void]$dialog.ShowDialog() } catch { Show-Problem $_.Exception.Message } })

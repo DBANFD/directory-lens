@@ -1,0 +1,3 @@
+displayName,id,groupType,membershipType,mail,source,mailEnabled,onPremisesSyncEnabled
+Example Devices,55555555-5555-4555-8555-555555555555,Security,assigned,,Cloud,False,
+Example Users,66666666-6666-4666-8666-666666666666,Security,assigned,,Cloud,False,

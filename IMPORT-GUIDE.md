@@ -73,3 +73,22 @@ Enrichment joins valid AAD Device IDs to Entra/Intune Device IDs. It never joins
 Health, onboarding, risk and exposure reflect the export. `Last device update` remains the portal field and is not interpreted as current sensor activity. Discovery records need not be onboarded endpoints. Missing snapshot records do not prove that a device is unprotected.
 
 Importing Defender replaces only the Defender dataset and preserves Entra devices, users and Intune records. Earlier Directory Lens databases remain readable; importing a dataset adds the new table transactionally after making a backup.
+
+## 5. Entra groups and member snapshots
+
+These are two distinct CSV types:
+
+| CSV | Export location | Required columns | Import location |
+| --- | --- | --- | --- |
+| Group catalog | Entra ID > Groups > All groups > Download groups | `id`, `displayName`, `groupType`, `membershipType` | Group membership > Import group catalog |
+| Direct members of one group | Select that group > Members > Bulk operations > Download members | `id` (member Object ID) | Select target in Group membership > Import selected group's members |
+
+The catalog also reads `source`, `mailEnabled` and `onPremisesSyncEnabled`. Missing/unknown management metadata allows comparison but disables upload generation. Supported group ID aliases: `objectId`, `groupId`; group name alias: `Name`.
+
+Member Object ID aliases: `objectId`, `memberId`, `memberObjectId`. The standard portal member format may also contain `displayName`, `objectType`, `mail`, `userType`, `deviceId`, `userPrincipalName`, `isUser`, `isGroup` and `isGuest`. Only the member Object ID is needed and stored for comparison. `deviceId` is not a membership Object ID. If a custom member export includes `groupId`, every row must match the selected target. A group catalog is explicitly rejected as a member list.
+
+Import the catalog first, select the correct group by its Object ID, then confirm that the member CSV contains the complete unfiltered direct membership for that group. No group association is inferred from a filename. A valid header-only file represents an empty group only after confirmation. Invalid IDs reject the entire import; repeated member IDs are deduplicated. Imports create a pre-import database backup.
+
+Use the synthetic `Group-Catalog.csv`, `Group-Members-Devices.csv` and `Group-Members-Users.csv` examples to try the two formats. Their IDs correspond to the existing device/user examples. All release tables remain empty until you import something.
+
+[Microsoft: download group members](https://learn.microsoft.com/en-us/entra/identity/users/groups-bulk-download-members) and [bulk import members](https://learn.microsoft.com/en-us/entra/identity/users/groups-bulk-import-members).

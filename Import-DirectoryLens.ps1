@@ -54,6 +54,10 @@ CREATE INDEX IF NOT EXISTS devices_device ON devices(DeviceId COLLATE NOCASE);
 CREATE TABLE IF NOT EXISTS defender(DefenderDeviceId TEXT PRIMARY KEY, DeviceId TEXT, DeviceName TEXT, NameKey TEXT, InventoryJson TEXT);
 CREATE INDEX IF NOT EXISTS defender_device ON defender(DeviceId);
 CREATE INDEX IF NOT EXISTS defender_name ON defender(NameKey);
+CREATE TABLE IF NOT EXISTS groups(GroupId TEXT PRIMARY KEY,DisplayName TEXT,NameKey TEXT,GroupType TEXT,MembershipType TEXT,Source TEXT,MailEnabled TEXT,OnPremisesSyncEnabled TEXT);
+CREATE INDEX IF NOT EXISTS groups_name ON groups(NameKey);
+CREATE TABLE IF NOT EXISTS group_members(GroupId TEXT,MemberId TEXT,PRIMARY KEY(GroupId,MemberId));
+CREATE TABLE IF NOT EXISTS group_snapshots(GroupId TEXT PRIMARY KEY,ImportedUtc TEXT,SourceFile TEXT,SourceModifiedUtc TEXT,MemberCount INTEGER);
 '@)
 $table = $Kind.ToLowerInvariant()
 [void]$sql.AppendLine("DELETE FROM $table;")
@@ -90,7 +94,7 @@ foreach ($row in $rows) {
 $source = Get-Item -LiteralPath $CsvPath
 $now = [DateTime]::UtcNow.ToString('o')
 [void]$sql.AppendLine(('INSERT INTO imports(Dataset,ImportedUtc,SourceFile,SourceModifiedUtc,RowCount) VALUES ({0},{1},{2},{3},{4});' -f (Sql-Text $Kind), (Sql-Text $now), (Sql-Text $source.Name), (Sql-Text $source.LastWriteTimeUtc.ToString('o')), $rows.Count))
-[void]$sql.AppendLine('PRAGMA user_version=2; COMMIT;')
+[void]$sql.AppendLine('PRAGMA user_version=3; COMMIT;')
 if (Test-Path -LiteralPath $DatabasePath) {
     $backup = $DatabasePath + '.backup-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + [guid]::NewGuid().ToString('N').Substring(0,8)
     # SQLite creates a consistent snapshot even if a reader has the database open.
