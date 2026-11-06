@@ -92,3 +92,17 @@ Import the catalog first, select the correct group by its Object ID, then confir
 Use the synthetic `Group-Catalog.csv`, `Group-Members-Devices.csv` and `Group-Members-Users.csv` examples to try the two formats. Their IDs correspond to the existing device/user examples. All release tables remain empty until you import something.
 
 [Microsoft: download group members](https://learn.microsoft.com/en-us/entra/identity/users/groups-bulk-download-members) and [bulk import members](https://learn.microsoft.com/en-us/entra/identity/users/groups-bulk-import-members).
+
+## Gap and health analysis in 0.5.0
+
+Import Entra devices, Intune devices and Defender devices from the same organization before opening **Gaps and health**. Import Entra users as well for OwnerText assessment. Choose a report to inspect unlinked inventories, invalid identity fields, disabled Entra devices still represented in inventory, Defender-only records, repeated identities within each dataset, and missing or weak owner labels. Entra without Defender is also available as a hunting review list.
+
+Links require a valid, nonzero Entra Device ID (Entra `deviceId`, Intune `Azure AD Device ID`, Defender `AAD Device Id`). Display names never join inventories. Invalid IDs remain reviewable by source record ID. A valid ID can be absent from another snapshot; this differs from an invalid ID. When a target dataset has not been imported, results say **Not loaded**, not confirmed missing. No snapshot can prove current service enrollment or device activity.
+
+OwnerText is a label from the Entra export. A unique exact imported user Object ID or UPN is treated as a stronger text match; display-name matches are weak regardless of count. Blank labels are reported as missing; unmatched or composite text remains unresolved. The tool does not infer ownership from Intune users or execute directory queries.
+
+Review the import time, days since import, source filename and source modified time above the report. File times can change when files are copied, and import time is not the original observation time. **Export current report** includes this context and a generation timestamp. **KQL from current report** passes the displayed device names to the local generator; blank names are omitted and the existing short-hostname limitations apply. No query is executed.
+
+For access or baseline group sweeps, retain the lookup in the group window and use Ctrl/Shift to select several catalog rows, then **Compare selected groups**. Load each group's complete direct-member export separately by selecting one target. Groups without snapshots appear as **Not loaded**, never as empty. Results and combined CSVs retain each target Object ID, member import/source timestamps and directory inventory context. Select exactly one target and compare again to enable its missing-member upload export. Existing type/source restrictions, Object ID matching, complete-export confirmation and exclusion of unresolved/duplicate inputs still apply. Nested groups are not expanded.
+
+Dataset replacement still creates a pre-import backup and preserves other datasets. No full import-history feature, authentication or network dependency is added.

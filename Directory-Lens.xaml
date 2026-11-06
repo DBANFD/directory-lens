@@ -21,6 +21,7 @@
      <Button x:Name="NavUsers" Content="Users" Style="{StaticResource Nav}"/>
      <Button x:Name="NavBulk" Content="Bulk device lookup" Style="{StaticResource Nav}"/>
      <Button x:Name="NavBulkUsers" Content="Bulk user lookup" Style="{StaticResource Nav}"/>
+     <Button x:Name="NavReports" Content="Gaps and health" Style="{StaticResource Nav}"/>
      <Button x:Name="NavGroups" Content="Group membership" Style="{StaticResource Nav}"/>
      <Button x:Name="NavKql" Content="KQL generator" Style="{StaticResource Nav}"/>
      <Border Height="1" Background="#30445C" Margin="0,20,0,16"/>

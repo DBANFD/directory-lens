@@ -15,6 +15,8 @@ $NameColumn=$null
 . (Join-Path $PSScriptRoot 'Branding.ps1')
 . (Join-Path $PSScriptRoot 'Groups.ps1')
 . (Join-Path $PSScriptRoot 'Group-UI.ps1')
+. (Join-Path $PSScriptRoot 'Reports.ps1')
+. (Join-Path $PSScriptRoot 'Report-UI.ps1')
 if (-not (Test-Path -LiteralPath $DatabasePath)) { & (Join-Path $PSScriptRoot 'Initialize-Database.ps1') -DatabasePath $DatabasePath }
 
 function Show-Problem([string]$Message) {
@@ -63,7 +65,7 @@ function Update-Actions {
 }
 function Set-Busy([bool]$Value) {
     $script:Busy=$Value
-    foreach ($key in @('NavDevices','NavUsers','NavBulk','NavBulkUsers','NavKql','NavData','NavBranding','NavGroups','CompareGroup','SearchButton','SearchText','ChooseCsv','ColumnPicker','NoHeaderCheck','ExampleButton','ImportDevices','ImportUsers','ImportIntune','ImportDefender','ReloadSummary')) { $script:C[$key].IsEnabled= -not $Value }
+    foreach ($key in @('NavDevices','NavUsers','NavBulk','NavBulkUsers','NavKql','NavData','NavBranding','NavGroups','NavReports','CompareGroup','SearchButton','SearchText','ChooseCsv','ColumnPicker','NoHeaderCheck','ExampleButton','ImportDevices','ImportUsers','ImportIntune','ImportDefender','ReloadSummary')) { $script:C[$key].IsEnabled= -not $Value }
     $script:C.Progress.Visibility=if ($Value) { 'Visible' } else { 'Collapsed' }
     if (-not $Value) { Update-CsvPreview } else { $script:C.RunBulk.IsEnabled=$false }
     Update-Actions
@@ -512,6 +514,7 @@ try {
     $C.CompareGroup.Add_Click({ try { Open-GroupComparison } catch { Show-Problem $_.Exception.Message } })
     $C.NavData.Add_Click({ Set-Page 'Data' })
     $C.NavBranding.Add_Click({ Set-Page 'Data'; $Window.UpdateLayout(); $offset=$C.BrandingHeading.TranslatePoint([Windows.Point]::new(0,0),$C.DataScroll.Content).Y; $C.DataScroll.ScrollToVerticalOffset($offset) })
+    $C.NavReports.Add_Click({ try { Show-InventoryReports } catch { Show-Problem $_.Exception.Message } })
     $C.NavKql.Add_Click({ try { $dialog=New-KqlWindow; [void]$dialog.ShowDialog() } catch { Show-Problem $_.Exception.Message } })
     $C.SearchButton.Add_Click({ try { if ([string]::IsNullOrWhiteSpace($C.SearchText.Text)) { Set-Status 'Enter some search text first.' } else { Start-Work $script:Page -Query $C.SearchText.Text } } catch { Show-Problem $_.Exception.Message } })
     $C.SearchText.Add_KeyDown({ if ($_.Key -eq 'Return' -and -not $script:Busy) { $C.SearchButton.RaiseEvent([Windows.RoutedEventArgs]::new([Windows.Controls.Button]::ClickEvent)) } })
