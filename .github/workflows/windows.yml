@@ -16,6 +16,7 @@ jobs:
           ./tests/Test-DirectoryLens.ps1
           ./tests/Test-Defender.ps1
           ./tests/Test-Groups.ps1
+          ./tests/Test-Reports.ps1
       - name: Build empty portable package
         shell: powershell
         run: ./Package.ps1

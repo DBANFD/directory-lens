@@ -5,7 +5,7 @@ function Test-GroupTables {
 function Get-GroupCatalog([string]$Query='') {
     if (-not (Test-GroupTables)) { return }
     $key=Sql-Text $Query.Trim().ToUpperInvariant()
-    Invoke-Database "SELECT g.*,s.ImportedUtc,s.SourceFile,s.MemberCount,CASE WHEN s.GroupId IS NULL THEN 'Not loaded' ELSE 'Loaded' END AS MembershipSnapshot FROM groups g LEFT JOIN group_snapshots s ON s.GroupId=g.GroupId WHERE instr(g.NameKey,$key)>0 OR upper(g.GroupId)=$key ORDER BY g.DisplayName,g.GroupId LIMIT 1000;"
+    Invoke-Database "SELECT g.*,s.ImportedUtc,s.SourceFile,s.SourceModifiedUtc,s.MemberCount,CASE WHEN s.GroupId IS NULL THEN 'Not loaded' ELSE 'Loaded' END AS MembershipSnapshot FROM groups g LEFT JOIN group_snapshots s ON s.GroupId=g.GroupId WHERE instr(g.NameKey,$key)>0 OR upper(g.GroupId)=$key ORDER BY g.DisplayName,g.GroupId LIMIT 1000;"
 }
 function Get-TargetGroup([string]$GroupId) {
     if (-not (Test-Guid $GroupId) -or -not (Test-GroupTables)) { throw 'Select a group from an imported catalog first.' }
@@ -113,6 +113,24 @@ function Compare-GroupMembers([string]$GroupId,[object[]]$Candidates,[ValidateSe
             if ($seen.ContainsKey($id)) { $status='DuplicateInput' }
             $seen[$id]=$true
         }
-        [pscustomobject]@{RequestedName=$inputName;ObjectId=$id;Comparison=$status;GroupEligible=($status -eq 'Missing' -and $writable);TargetGroup=$group.DisplayName;TargetGroupId=$group.GroupId;MembershipImportedUtc=$snapshot[0].ImportedUtc;MembershipSource=$snapshot[0].SourceFile;ExportPolicy=$(if ($writable) { 'Manual additions supported' } else { 'Comparison only: target type/source does not support this manual upload' })}
+        [pscustomobject]@{RequestedName=$inputName;ObjectId=$id;Comparison=$status;GroupEligible=($status -eq 'Missing' -and $writable);TargetGroup=$group.DisplayName;TargetGroupId=$group.GroupId;MembershipImportedUtc=$snapshot[0].ImportedUtc;MembershipSource=$snapshot[0].SourceFile;MembershipSourceModifiedUtc=$snapshot[0].SourceModifiedUtc;MembershipAgeDays=[Math]::Round(([DateTime]::UtcNow-([DateTimeOffset]::Parse($snapshot[0].ImportedUtc).UtcDateTime)).TotalDays,1);ExportPolicy=$(if ($writable) { 'Manual additions supported' } else { 'Comparison only: target type/source does not support this manual upload' })}
+    }
+}
+function Compare-MultipleGroups([string[]]$GroupIds,[object[]]$Candidates,[ValidateSet('Devices','Users')][string]$EntityType) {
+    $context=@(Get-SnapshotContext) -join ' | '
+    foreach ($id in @($GroupIds | Select-Object -Unique)) {
+        $group=Get-TargetGroup $id
+        $key=Sql-Text $group.GroupId
+        $snapshot=@(Invoke-Database "SELECT * FROM group_snapshots WHERE GroupId=$key;")
+        $rows=if ($snapshot.Count) { @(Compare-GroupMembers $group.GroupId $Candidates $EntityType) } else {
+            @(foreach ($candidate in $Candidates) {
+                $name=if ($candidate.PSObject.Properties['RequestedName']) { $candidate.RequestedName } elseif ($candidate.PSObject.Properties['RequestedUser']) { $candidate.RequestedUser } else { $candidate.DisplayName }
+                [pscustomobject]@{RequestedName=$name;ObjectId=$candidate.ObjectId;Comparison='Not loaded';GroupEligible=$false;TargetGroup=$group.DisplayName;TargetGroupId=$group.GroupId;MembershipImportedUtc='';MembershipSource='';MembershipSourceModifiedUtc='';MembershipAgeDays=$null;ExportPolicy='Comparison unavailable: import complete direct-member snapshot'}
+            })
+        }
+        foreach ($row in $rows) {
+            $row | Add-Member NoteProperty InventorySnapshots $context
+            $row
+        }
     }
 }
