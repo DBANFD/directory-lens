@@ -46,6 +46,8 @@ The package script uses an explicit file allowlist and creates a new empty datab
 
 SQLite runtime provenance: [THIRD-PARTY.txt](THIRD-PARTY.txt). This project is independent of Microsoft. No third-party endorsement is implied.
 
+Licensed under the [MIT License](LICENSE).
+
 ## Workspace branding
 
 Click **Branding** in the sidebar (or scroll to **Workspace branding** under **Data and refresh**), and set an app name, subtitle and hex accent color. Optionally choose a PNG logo (up to 5 MB, maximum 4096 pixels per dimension), then click **Save branding**. Changes apply immediately and persist across launches. **Restore default branding** resets the appearance without changing imported data.
