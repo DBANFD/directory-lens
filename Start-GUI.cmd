@@ -1,2 +1,2 @@
 ﻿@echo off
-powershell.exe -NoProfile -STA -WindowStyle Hidden -File "%~dp0Directory-Lens-GUI.ps1"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -STA -WindowStyle Hidden -File "%~dp0Directory-Lens-GUI.ps1"

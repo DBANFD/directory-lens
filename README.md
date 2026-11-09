@@ -45,7 +45,7 @@ Run from Windows PowerShell 5.1:
 .\Package.ps1
 ```
 
-The package script uses an explicit file allowlist and creates a new empty database, regardless of data in the developer workspace. Output: `dist/Directory-Lens-0.5.0.zip`. A cloned checkout initializes its database on first GUI launch. `Initialize-Database.ps1` refuses to overwrite an existing database.
+The package script uses an explicit file allowlist and creates a new empty database, regardless of data in the developer workspace. Output: `dist/Directory-Lens-0.5.1.zip`. A cloned checkout initializes its database on first GUI launch. `Initialize-Database.ps1` refuses to overwrite an existing database.
 
 SQLite runtime provenance: [THIRD-PARTY.txt](THIRD-PARTY.txt). This project is independent of Microsoft. No third-party endorsement is implied.
 

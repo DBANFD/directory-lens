@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.1 - 2026-11-09
+
+- Fixed a startup error on machines with the RemoteSigned execution policy when the package was downloaded from the internet. Directory-Lens.exe and Start-GUI.cmd now run the bundled scripts with a process-only Bypass policy. Group Policy execution policy settings still apply.
+
 ## 0.5.0 - 2026-11-09
 
 - Inventory gap reports with CSV export: Entra devices without Intune, Intune and Defender records without a valid Entra Device ID, and linked Intune/Defender identities missing against each other. Joins use valid Entra Device IDs only, never display names.

@@ -471,15 +471,19 @@ try {
     $reader=New-Object Xml.XmlNodeReader($xaml)
     $script:Window=[Windows.Markup.XamlReader]::Load($reader)
     # The window/taskbar image lives in the launcher, keeping the portable package minimal.
-    $iconAssembly=[Reflection.Assembly]::LoadFile((Join-Path $PSScriptRoot 'Directory-Lens.exe'))
-    $iconStream=$iconAssembly.GetManifestResourceStream('DirectoryIcon.png')
-    if ($iconStream) {
-        try {
-            $iconFrame=[Windows.Media.Imaging.BitmapFrame]::Create($iconStream,[Windows.Media.Imaging.BitmapCreateOptions]::PreservePixelFormat,[Windows.Media.Imaging.BitmapCacheOption]::OnLoad)
-            $iconFrame.Freeze()
-            $script:Window.Icon=$iconFrame
-        } finally { $iconStream.Dispose() }
-    }
+    # Loaded from bytes because .NET refuses LoadFile on a downloaded (internet zone) exe.
+    # The icon is cosmetic: any failure leaves the default icon and startup continues.
+    try {
+        $iconAssembly=[Reflection.Assembly]::Load([IO.File]::ReadAllBytes((Join-Path $PSScriptRoot 'Directory-Lens.exe')))
+        $iconStream=$iconAssembly.GetManifestResourceStream('DirectoryIcon.png')
+        if ($iconStream) {
+            try {
+                $iconFrame=[Windows.Media.Imaging.BitmapFrame]::Create($iconStream,[Windows.Media.Imaging.BitmapCreateOptions]::PreservePixelFormat,[Windows.Media.Imaging.BitmapCacheOption]::OnLoad)
+                $iconFrame.Freeze()
+                $script:Window.Icon=$iconFrame
+            } finally { $iconStream.Dispose() }
+        }
+    } catch { }
     $script:C=@{}
     $xaml.SelectNodes('//*[@*[local-name()="Name"]]') | ForEach-Object { $name=$_.GetAttribute('Name','http://schemas.microsoft.com/winfx/2006/xaml'); if ($name) { $script:C[$name]=$script:Window.FindName($name) } }
     $script:DefaultIcon=$script:Window.Icon

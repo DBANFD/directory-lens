@@ -13,7 +13,13 @@ internal static class DirectoryLensLauncher
         try
         {
             string script = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Directory-Lens-GUI.ps1");
-            using (Runspace runspace = RunspaceFactory.CreateRunspace())
+            // Run the bundled scripts with a process-only Bypass policy, like
+            // powershell.exe -ExecutionPolicy Bypass. Downloaded copies carry the
+            // internet zone mark, which RemoteSigned machines otherwise refuse.
+            // Group Policy settings still take precedence.
+            InitialSessionState state = InitialSessionState.CreateDefault();
+            state.ExecutionPolicy = Microsoft.PowerShell.ExecutionPolicy.Bypass;
+            using (Runspace runspace = RunspaceFactory.CreateRunspace(state))
             {
                 runspace.ApartmentState = ApartmentState.STA;
                 runspace.ThreadOptions = PSThreadOptions.UseCurrentThread;
