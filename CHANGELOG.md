@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.2 - 2026-11-11
+
+- Startup errors now show the actual PowerShell error and its position. The launcher previously displayed only a .NET type name.
+- Lookup report CSVs keep text as text in Excel: cells that start with `=`, `+`, `-`, `@`, a tab or a line break are written with a leading apostrophe, so inventory text from a tenant export cannot run as a formula.
+- Read-only database queries run the bundled SQLite shell in safe mode, which refuses shell and file commands. Imports are unchanged.
+- Releases are built by a tag-triggered workflow that tests, packages, attests build provenance and creates a draft release. CI actions are pinned by commit, Dependabot watches them, and PSScriptAnalyzer runs on every push.
+
 ## 0.5.1 - 2026-11-09
 
 - Fixed a startup error on machines with the RemoteSigned execution policy when the package was downloaded from the internet. Directory-Lens.exe and Start-GUI.cmd now run the bundled scripts with a process-only Bypass policy. Group Policy execution policy settings still apply.

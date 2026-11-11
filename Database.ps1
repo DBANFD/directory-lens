@@ -16,7 +16,9 @@ function Invoke-Database([string]$Sql, [switch]$Write) {
     $fullPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($DatabasePath)
     $info = New-Object Diagnostics.ProcessStartInfo
     $info.FileName = $script:SqliteExe
-    $mode = if ($Write) { '' } else { '-readonly ' }
+    # Read-only queries also run in safe mode, where the shell refuses .shell, .system and
+    # other file-touching commands. Writes need VACUUM INTO for the pre-import backup.
+    $mode = if ($Write) { '' } else { '-readonly -safe ' }
     $info.Arguments = '-batch -bail -json -cmd ".timeout 10000" -init NUL ' + $mode + '"' + $fullPath + '"'
     $info.UseShellExecute = $false
     $info.CreateNoWindow = $true

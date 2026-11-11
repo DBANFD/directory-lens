@@ -34,6 +34,18 @@ $TemplatePath=Join-Path $root 'ImportGroupMembersTemplate.csv'
 $group=Join-Path $testRoot 'group.csv'
 Save-Group $matches $group
 Assert ((Get-Content $group -Tail 1) -eq '11111111-1111-4111-8111-111111111111') 'Group export must contain Object ID'
+# Spreadsheet formula guard: text from tenant exports must stay text when a report is opened in Excel.
+Assert ((ConvertTo-SafeCsvText '=1+1') -eq "'=1+1" -and (ConvertTo-SafeCsvText '  @SUM(A1)') -eq "'  @SUM(A1)" -and (ConvertTo-SafeCsvText "`tx") -eq "'`tx") 'Formula-leading text must be prefixed'
+Assert ((ConvertTo-SafeCsvText 'LAB-PC-01') -eq 'LAB-PC-01' -and (ConvertTo-SafeCsvText '') -eq '' -and (ConvertTo-SafeCsvText 'a=b') -eq 'a=b') 'Ordinary text must be unchanged'
+$formulaReport=Join-Path $testRoot 'formula.csv'
+Save-Report @([pscustomobject]@{RequestedName='=cmd|x'; DeviceName='+SUM(1)'; OwnerText='-2+3'; Status='@x'; MatchCount=2; GroupEligible=$false}) $formulaReport
+$savedReport=@(Import-Csv -LiteralPath $formulaReport)
+Assert ($savedReport.Count -eq 1 -and $savedReport[0].RequestedName -eq "'=cmd|x" -and $savedReport[0].DeviceName -eq "'+SUM(1)" -and $savedReport[0].OwnerText -eq "'-2+3" -and $savedReport[0].Status -eq "'@x") 'Report export must neutralize formula cells'
+Assert ($savedReport[0].MatchCount -eq '2' -and $savedReport[0].GroupEligible -eq 'False') 'Report export must keep non-text values'
+# Read-only queries run the SQLite shell in safe mode; writes still work.
+$refused=$false
+try { Invoke-Database '.shell echo unsafe' | Out-Null } catch { $refused=$true }
+Assert $refused 'Safe mode must refuse shell commands on read-only queries'
 Assert (-not (@(Search-DeviceText 'LAB')[0].GroupEligible)) 'Partial match must not be group eligible'
 $templates=@('Defender mode and transition','Device inventory and health','Recent successful logons','SentinelOne and MDE coexistence','Security-agent uninstall activity','Application Control audit and blocks','Missing or stale device telemetry','ASR audit and blocks','Network Protection audit and blocks','Controlled Folder Access','Defender configuration gaps')
 foreach ($template in $templates) {

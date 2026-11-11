@@ -88,11 +88,27 @@ function Resolve-OutputPath([string]$Path, [string]$Prefix) {
     }
     return $Path
 }
+function ConvertTo-SafeCsvText([string]$Text) {
+    # Spreadsheets evaluate a cell that starts with = + - or @ (also after leading spaces),
+    # or with a tab or line break. Inventory text comes from tenant exports, so prefix such
+    # cells with an apostrophe to keep them as text.
+    if ($Text -match '^\s*[=+\-@]' -or $Text -match '^[\t\r\n]') { return "'" + $Text }
+    return $Text
+}
 function Save-Report($Results, [string]$Path) {
     $Path = Resolve-OutputPath $Path 'Entra-Lookup'
     Assert-NewPath $Path
     $columns=@($Results | ForEach-Object { $_.PSObject.Properties.Name } | Select-Object -Unique)
-    $Results | Select-Object -Property $columns | Export-Csv -LiteralPath $Path -NoTypeInformation -Encoding UTF8
+    $safe=@(foreach ($row in $Results) {
+        $record=[ordered]@{}
+        foreach ($column in $columns) {
+            $property=$row.PSObject.Properties[$column]
+            $value=if ($property) { $property.Value } else { $null }
+            $record[$column]=if ($value -is [string]) { ConvertTo-SafeCsvText $value } else { $value }
+        }
+        [pscustomobject]$record
+    })
+    $safe | Export-Csv -LiteralPath $Path -NoTypeInformation -Encoding UTF8
     Write-Host "Lookup report saved: $Path"
 }
 function Save-Group($Results, [string]$Path) {

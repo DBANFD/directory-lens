@@ -6,7 +6,9 @@ jobs:
   verify:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: Build launcher
         shell: powershell
         run: ./Build.ps1
@@ -20,9 +22,29 @@ jobs:
       - name: Build empty portable package
         shell: powershell
         run: ./Package.ps1
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: Directory-Lens-portable
           path: |
             dist/*.zip
             dist/*.sha256
+  analyze:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: PSScriptAnalyzer (errors fail the job, warnings are listed)
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (-not (Get-Module -ListAvailable PSScriptAnalyzer)) {
+            Install-Module PSScriptAnalyzer -Scope CurrentUser -Force -SkipPublisherCheck
+          }
+          $findings = @(Invoke-ScriptAnalyzer -Path . -Recurse)
+          $findings | Group-Object Severity, RuleName | Sort-Object Count -Descending | Format-Table Count, Name -AutoSize | Out-String -Width 200
+          $errors = @($findings | Where-Object { $_.Severity -in 'Error', 'ParseError' })
+          if ($errors.Count) {
+            $errors | Format-Table ScriptName, Line, RuleName, Message -AutoSize | Out-String -Width 300
+            throw "$($errors.Count) analyzer errors"
+          }

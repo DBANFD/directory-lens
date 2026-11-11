@@ -2,6 +2,7 @@
 using System.IO;
 using System.Management.Automation;
 using System.Management.Automation.Runspaces;
+using System.Text;
 using System.Threading;
 using System.Windows;
 
@@ -30,7 +31,19 @@ internal static class DirectoryLensLauncher
                     shell.AddCommand(script);
                     shell.Invoke();
                     if (shell.HadErrors)
-                        MessageBox.Show(shell.Streams.Error.ToString(), "Directory Lens - startup error");
+                    {
+                        // Streams.Error is a collection; its ToString() is only the type name.
+                        StringBuilder details = new StringBuilder();
+                        foreach (ErrorRecord record in shell.Streams.Error)
+                        {
+                            details.AppendLine(record.ToString());
+                            if (record.InvocationInfo != null && !String.IsNullOrEmpty(record.InvocationInfo.PositionMessage))
+                                details.AppendLine(record.InvocationInfo.PositionMessage);
+                        }
+                        if (details.Length == 0)
+                            details.Append("The startup script reported an error without details.");
+                        MessageBox.Show(details.ToString(), "Directory Lens - startup error");
+                    }
                 }
             }
         }
